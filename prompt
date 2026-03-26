@@ -1,0 +1,254 @@
+import React, { useState, useEffect } from 'react';
+import { Copy, Check, Plus, Trash2, FileText, Sparkles, CheckCircle, List } from 'lucide-react';
+
+export default function App() {
+  const [textInput, setTextInput] = useState('');
+  const [savedTexts, setSavedTexts] = useState([]);
+  const [copiedId, setCopiedId] = useState(null);
+  const [showDone, setShowDone] = useState(false);
+
+  // Load from local memory (simulation for state)
+  useEffect(() => {
+    const saved = localStorage.getItem('premium_texts');
+    if (saved) {
+      setSavedTexts(JSON.parse(saved));
+    }
+  }, []);
+
+  // Save to local memory
+  useEffect(() => {
+    localStorage.setItem('premium_texts', JSON.stringify(savedTexts));
+  }, [savedTexts]);
+
+  const handleSaveText = () => {
+    if (!textInput.trim()) return;
+    
+    const newEntry = {
+      id: crypto.randomUUID(),
+      text: textInput,
+      timestamp: new Date().toISOString()
+    };
+    
+    setSavedTexts([newEntry, ...savedTexts]);
+    setTextInput('');
+  };
+
+  const handleCopyText = (text, id) => {
+    // Robust copy function using document.execCommand for better iframe compatibility
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    
+    // Move outside of screen to make it invisible
+    textArea.style.position = "absolute";
+    textArea.style.left = "-999999px";
+    
+    document.body.appendChild(textArea);
+    textArea.select();
+    
+    try {
+      document.execCommand('copy');
+      setCopiedId(id);
+      setTimeout(() => {
+        setCopiedId(null);
+        // Copy zalyavar 800ms nantar tya item la "Done" mark kara
+        setSavedTexts(prev => prev.map(item => 
+          item.id === id ? { ...item, isDone: true } : item
+        ));
+      }, 800); 
+    } catch (err) {
+      console.error('Copy failed', err);
+    }
+    
+    textArea.remove();
+  };
+
+  const handleDelete = (id) => {
+    setSavedTexts(savedTexts.filter(item => item.id !== id));
+  };
+
+  // Serial numbers thevnyasathi aani filter karanyasathi
+  const textsWithSerials = savedTexts.map((item, index) => ({
+    ...item,
+    displaySerial: savedTexts.length - index
+  }));
+
+  const pendingTexts = textsWithSerials.filter(item => !item.isDone);
+  const doneTexts = textsWithSerials.filter(item => item.isDone);
+  const displayedTexts = showDone ? doneTexts : pendingTexts;
+
+  return (
+    <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-indigo-500/30">
+      {/* Premium Background Effects */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-600/20 blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/20 blur-[120px]"></div>
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-8 min-h-screen">
+        
+        {/* Header Section */}
+        <header className="flex items-center justify-between pt-4 pb-2 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl shadow-lg shadow-indigo-500/20">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-slate-400">
+                Text Vault Pro
+              </h1>
+              <p className="text-sm text-slate-400">Secure & simple text manager</p>
+            </div>
+          </div>
+        </header>
+
+        {/* Input Section (Add New Text) */}
+        <section className="bg-white/[0.03] border border-white/10 rounded-3xl p-5 sm:p-6 backdrop-blur-xl shadow-2xl">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-indigo-400" />
+            Navin Text Add Kara
+          </h2>
+          <div className="relative">
+            <textarea
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="Tumcha motha text ithe paste kara..."
+              className="w-full bg-black/20 border border-white/10 rounded-2xl p-4 sm:p-5 min-h-[160px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all resize-y custom-scrollbar text-base sm:text-lg"
+            />
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={handleSaveText}
+              disabled={!textInput.trim()}
+              className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white px-6 py-3 rounded-xl font-medium transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg shadow-indigo-500/25"
+            >
+              <Plus className="w-5 h-5" />
+              Save Kara
+            </button>
+          </div>
+        </section>
+
+        {/* Dashboard / List Section */}
+        <section className="flex-1 pb-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2 bg-white/[0.05] p-1.5 rounded-xl border border-white/10 w-fit">
+              <button
+                onClick={() => setShowDone(false)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  !showDone 
+                    ? 'bg-indigo-500 text-white shadow-lg' 
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}
+              >
+                <List className="w-4 h-4" />
+                Pending ({pendingTexts.length})
+              </button>
+              <button
+                onClick={() => setShowDone(true)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  showDone 
+                    ? 'bg-emerald-500 text-white shadow-lg' 
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}
+              >
+                <CheckCircle className="w-4 h-4" />
+                Done ({doneTexts.length})
+              </button>
+            </div>
+            
+            <span className="bg-indigo-500/20 text-indigo-300 py-1.5 px-4 rounded-full text-sm font-medium border border-indigo-500/20 w-fit">
+              Total Texts: {savedTexts.length}
+            </span>
+          </div>
+
+          {displayedTexts.length === 0 ? (
+            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-12 flex flex-col items-center justify-center text-center backdrop-blur-sm">
+              <div className="w-16 h-16 bg-white/[0.05] rounded-full flex items-center justify-center mb-4">
+                {showDone ? <CheckCircle className="w-8 h-8 text-emerald-500/50" /> : <FileText className="w-8 h-8 text-slate-500" />}
+              </div>
+              <p className="text-slate-400 text-lg">
+                {showDone ? "Ajun kontahi text copy kelela (Done) nahi." : "Ajun kontahi pending text nahi."}
+              </p>
+              {!showDone && <p className="text-slate-500 text-sm mt-1">Varil box madhe text paste karun Save kara.</p>}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              {displayedTexts.map((item) => {
+                return (
+                  <div 
+                    key={item.id} 
+                    className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 hover:border-white/10 rounded-2xl p-4 sm:p-5 flex items-center justify-between transition-all backdrop-blur-sm shadow-sm"
+                  >
+                    {/* Left Side: Serial Number Only */}
+                    <div className="flex items-center gap-4 sm:gap-6">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Sr. No.</span>
+                        <span className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-500">
+                          #{item.displaySerial.toString().padStart(2, '0')}
+                        </span>
+                      </div>
+                      <div className="h-10 w-px bg-white/10 hidden sm:block"></div>
+                      <div className="hidden sm:block text-slate-400 text-sm italic">
+                        {showDone ? '••• Copied Content •••' : '••• Hidden Content •••'}
+                      </div>
+                    </div>
+
+                    {/* Right Side: Actions (Copy & Delete) */}
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <button
+                        onClick={() => handleCopyText(item.text, item.id)}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all ${
+                          copiedId === item.id 
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                            : showDone 
+                              ? 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+                              : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 hover:border-indigo-500/40'
+                        }`}
+                      >
+                        {copiedId === item.id ? (
+                          <>
+                            <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <span className="hidden sm:inline">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <span className="hidden sm:inline">{showDone ? 'Copy Again' : 'Copy Text'}</span>
+                          </>
+                        )}
+                      </button>
+                      
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="p-2.5 sm:p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-transparent hover:border-red-500/20 transition-all"
+                        title="Delete this text"
+                      >
+                        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.02);
+          border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      `}} />
+    </div>
+  );
+}
